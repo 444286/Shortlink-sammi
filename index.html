@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Link Shortener</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    min-height: 100vh;
+    padding: 20px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+  .card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 32px 24px;
+    max-width: 560px;
+    width: 100%;
+    margin-top: 40px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  h1 { text-align: center; font-size: 24px; color: #333; margin-bottom: 8px; }
+  p.sub { text-align: center; color: #888; font-size: 14px; margin-bottom: 24px; }
+  input[type="url"] {
+    width: 100%;
+    padding: 14px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    outline: none;
+  }
+  input[type="url"]:focus { border-color: #764ba2; }
+  button {
+    width: 100%;
+    padding: 14px;
+    margin-top: 14px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  button:disabled { opacity: 0.6; cursor: not-allowed; }
+  .error {
+    color: #d33;
+    font-size: 13px;
+    margin-top: 10px;
+    text-align: center;
+    display: none;
+  }
+  .error.show { display: block; }
+  #resultList {
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .linkRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #f5f5fa;
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .linkRow .num {
+    font-size: 13px;
+    font-weight: 700;
+    color: #aaa;
+    min-width: 20px;
+  }
+  .linkRow .linkText {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 600;
+    color: #764ba2;
+    word-break: break-all;
+  }
+  .linkRow .copyBtn {
+    width: auto;
+    margin-top: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+    background: #333;
+    white-space: nowrap;
+  }
+  .progress {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-top: 14px;
+    display: none;
+  }
+  .progress.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <h1>🔗 Link Shortener</h1>
+  <p class="sub">Ekta long link diye 10ta short link ekshathe banan</p>
+
+  <input type="url" id="longUrl" placeholder="https://example.com/your-long-link" required>
+  <button id="shortenBtn" onclick="shortenLink()">10ta Short Link Banao</button>
+
+  <div class="error" id="errorBox"></div>
+  <div class="progress" id="progressBox"></div>
+
+  <div id="resultList"></div>
+</div>
+
+<script>
+// Firebase Realtime Database URL
+const FIREBASE_DB_URL = "https://shortlink-b2e47-default-rtdb.asia-southeast1.firebasedatabase.app";
+
+function generateCode(length = 6) {
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  let code = "";
+  for (let i = 0; i < length; i++) {
+    code += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return code;
+}
+
+function isValidUrl(str) {
+  try {
+    const u = new URL(str);
+    return u.protocol === "http:" || u.protocol === "https:";
+  } catch {
+    return false;
+  }
+}
+
+async function codeExists(code) {
+  const res = await fetch(`${FIREBASE_DB_URL}/links/${code}.json`);
+  const data = await res.json();
+  return data !== null;
+}
+
+async function createOneShortLink(longUrl) {
+  let code = generateCode();
+  let tries = 0;
+  while (await codeExists(code) && tries < 5) {
+    code = generateCode();
+    tries++;
+  }
+
+  const saveRes = await fetch(`${FIREBASE_DB_URL}/links/${code}.json`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      url: longUrl,
+      created: Date.now(),
+      clicks: 0
+    })
+  });
+
+  if (!saveRes.ok) throw new Error("Save failed");
+
+  return `${window.location.origin}/${code}`;
+}
+
+async function shortenLink() {
+  const btn = document.getElementById("shortenBtn");
+  const input = document.getElementById("longUrl");
+  const errorBox = document.getElementById("errorBox");
+  const progressBox = document.getElementById("progressBox");
+  const resultList = document.getElementById("resultList");
+  const longUrl = input.value.trim();
+
+  errorBox.classList.remove("show");
+  resultList.innerHTML = ""; // age jeta chilo shob mucche dilo (refresh na kore o notun generate korle replace hoy)
+
+  if (!isValidUrl(longUrl)) {
+    errorBox.textContent = "Sothik URL din (http:// othoba https:// diye shuru hote hobe)";
+    errorBox.classList.add("show");
+    return;
+  }
+
+  btn.disabled = true;
+  progressBox.classList.add("show");
+
+  try {
+    for (let i = 1; i <= 10; i++) {
+      progressBox.textContent = `Banano hocche... (${i}/10)`;
+      const shortLink = await createOneShortLink(longUrl);
+      addLinkRow(i, shortLink);
+    }
+    progressBox.textContent = "Sob koyta link toiri hoye geche!";
+    setTimeout(() => progressBox.classList.remove("show"), 2000);
+  } catch (err) {
+    errorBox.textContent = "Kichu vul hoyeche, abar try korun";
+    errorBox.classList.add("show");
+    progressBox.classList.remove("show");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function addLinkRow(num, link) {
+  const resultList = document.getElementById("resultList");
+  const row = document.createElement("div");
+  row.className = "linkRow";
+  row.innerHTML = `
+    <span class="num">${num}.</span>
+    <span class="linkText">${link}</span>
+    <button class="copyBtn" onclick="copyLink(this, '${link}')">Copy</button>
+  `;
+  resultList.appendChild(row);
+}
+
+function copyLink(btn, link) {
+  navigator.clipboard.writeText(link).then(() => {
+    const original = btn.textContent;
+    btn.textContent = "Copied!";
+    setTimeout(() => { btn.textContent = original; }, 1500);
+  });
+}
+</script>
+
+</body>
+</html>

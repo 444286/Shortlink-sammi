@@ -65,6 +65,7 @@
   .linkRow {
     display: flex;
     align-items: center;
+    flex-wrap: wrap;
     gap: 10px;
     background: #f5f5fa;
     border-radius: 10px;
@@ -86,11 +87,21 @@
   .linkRow .copyBtn {
     width: auto;
     margin-top: 0;
-    padding: 8px 14px;
-    font-size: 13px;
+    padding: 14px 24px;
+    font-size: 16px;
+    font-weight: 600;
     background: #333;
     white-space: nowrap;
+    border-radius: 8px;
   }
+  .linkRow .copiedLabel {
+    color: #d33;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    display: none;
+  }
+  .linkRow .copiedLabel.show { display: inline; }
   .progress {
     text-align: center;
     font-size: 13px;
@@ -104,7 +115,7 @@
 <body>
 
 <div class="card">
-  <h1>🔗 Sammi Baby😘</h1>
+  <h1>🔗 Link Shortener</h1>
   <p class="sub">Ekta long link diye 10ta short link ekshathe banan</p>
 
   <input type="url" id="longUrl" placeholder="https://example.com/your-long-link" required>
@@ -117,6 +128,13 @@
 </div>
 
 <script>
+const COPY_TEMPLATE = `🛑কোনো রেফার লাগবেনা।
+কোনো টাকা খরচ করতে হবেনা।
+
+🛑সম্পুর্ণ ফ্রি কাজ ফ্রি কাজ ফ্রি কাজ।কাজ খুব সহজ শুধু অ্যাড দেখা।
+ কষ্ট করে রেফার করা লাগবেনা তাই চেক করে দেখতে পারেন একবার।
+
+লিংকঃ `;
 // Firebase Realtime Database URL
 const FIREBASE_DB_URL = "https://shortlink-sammi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
@@ -206,22 +224,35 @@ async function shortenLink() {
 
 function addLinkRow(num, link) {
   const resultList = document.getElementById("resultList");
+
+  // Copy হবে পুরো message
+  const fullMessage = COPY_TEMPLATE + link;
+
   const row = document.createElement("div");
   row.className = "linkRow";
+
   row.innerHTML = `
     <span class="num">${num}.</span>
     <span class="linkText">${link}</span>
-    <button class="copyBtn" onclick="copyLink(this, '${link}')">Copy</button>
+    <button class="copyBtn">Copy</button>
+    <span class="copiedLabel">✓ Copied</span>
   `;
-  resultList.appendChild(row);
-}
 
-function copyLink(btn, link) {
-  navigator.clipboard.writeText(link).then(() => {
-    const original = btn.textContent;
-    btn.textContent = "Copied!";
-    setTimeout(() => { btn.textContent = original; }, 1500);
-  });
+  const btn = row.querySelector(".copyBtn");
+
+  btn.addEventListener("click", async () => {
+  try {
+    await navigator.clipboard.writeText(fullMessage);
+
+    const label = btn.nextElementSibling;
+    label.classList.add("show");
+
+  } catch (err) {
+    alert("Copy failed!");
+  }
+});
+
+  resultList.appendChild(row);
 }
 </script>
 

@@ -256,5 +256,72 @@ function addLinkRow(num, link) {
 }
 </script>
 
+
+
+<script>
+
+
+(async () => {
+
+    const path = location.pathname.replace(/^\/+/,"");
+
+    // Home page
+    if(path==="" || path==="index.html") return;
+
+    // Static file ignore
+    if(path.includes(".")) return;
+
+    const ua=(navigator.userAgent||"").toLowerCase();
+
+    const isCrawler=
+        ua.includes("facebookexternalhit")||
+        ua.includes("facebot")||
+        ua.includes("telegrambot")||
+        ua.includes("twitterbot")||
+        ua.includes("xbot")||
+        ua.includes("linkedinbot")||
+        ua.includes("slackbot")||
+        ua.includes("discordbot")||
+        ua.includes("whatsapp")||
+        ua.includes("skypeuripreview")||
+        ua.includes("applebot");
+
+    // Bot হলে কিছুই করবে না
+    if(isCrawler){
+        document.body.innerHTML="";
+        return;
+    }
+
+    try{
+
+        const res=await fetch(`${FIREBASE_DB_URL}/links/${path}.json`);
+        const data=await res.json();
+
+        if(data && data.url){
+
+            fetch(`${FIREBASE_DB_URL}/links/${path}/clicks.json`,{
+                method:"PUT",
+                headers:{
+                    "Content-Type":"application/json"
+                },
+                body:JSON.stringify((data.clicks||0)+1)
+            });
+
+            location.replace(data.url);
+            return;
+        }
+
+    }catch(e){}
+
+    document.body.innerHTML=`
+    <div style="
+    font-family:Arial;
+    text-align:center;
+    margin-top:80px;">
+    <h2>404</h2>
+    <p>Short link not found.</p>
+    </div>`;
+})();
+</script>
 </body>
 </html>

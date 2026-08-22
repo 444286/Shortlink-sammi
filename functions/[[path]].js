@@ -1,7 +1,7 @@
 // Cloudflare Pages Function - ei file shob path (/abc123) catch kore
 // Firebase Realtime Database theke long URL khuje ber kore redirect kore dey
 
-const FIREBASE_DB_URL = "https://YOUR-PROJECT-ID-default-rtdb.firebaseio.com";
+const FIREBASE_DB_URL = "https://shortlink-sammi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 export async function onRequest(context) {
   const { request, next } = context;

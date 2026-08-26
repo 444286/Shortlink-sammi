@@ -1,26 +1,13 @@
-// Cloudflare Pages Function
-// functions/[[path]].js
-
 const FIREBASE_DB_URL =
   "https://shortlink-sammi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 
-// ==========================================
-// CUSTOM PREVIEW TITLE + DESCRIPTION
-// ==========================================
-
-const PREVIEW_TITLE = "টাকার দরজা";
-
-const PREVIEW_DESCRIPTION =
-  "🛑ইনভেস্ট ও রেফার ছাড়াই ইনকাম করুন";
-
-
-// ==========================================
+// ======================================================
 // HTML ESCAPE
-// ==========================================
+// ======================================================
 
 function escapeHTML(str) {
-  return String(str)
+  return String(str || "")
     .replace(/&/g, "&amp;")
     .replace(/"/g, "&quot;")
     .replace(/</g, "&lt;")
@@ -28,159 +15,377 @@ function escapeHTML(str) {
 }
 
 
-// ==========================================
-// ORIGINAL WEBSITE IMAGE বের করা
-// ==========================================
+// ======================================================
+// META TAG থেকে CONTENT বের করা
+// ======================================================
 
-async function getOriginalImage(targetUrl) {
-  try {
-    const res = await fetch(targetUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-      }
-    });
+function getMeta(html, type, value) {
 
-    if (!res.ok) return null;
+  const patterns = [
 
-    const html = await res.text();
+    // property="og:title" content="..."
+    new RegExp(
+      `<meta[^>]+${type}=["']${value}["'][^>]+content=["']([^"']*)["'][^>]*>`,
+      "i"
+    ),
 
-    // og:image
-    let match = html.match(
-      /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["'][^>]*>/i
-    );
+    // content="..." property="og:title"
+    new RegExp(
+      `<meta[^>]+content=["']([^"']*)["'][^>]+${type}=["']${value}["'][^>]*>`,
+      "i"
+    )
 
-    if (!match) {
-      match = html.match(
-        /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["'][^>]*>/i
-      );
+  ];
+
+  for (const regex of patterns) {
+
+    const match = html.match(regex);
+
+    if (match && match[1]) {
+      return match[1].trim();
     }
 
-    // twitter:image fallback
-    if (!match) {
-      match = html.match(
-        /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["'][^>]*>/i
-      );
-    }
-
-    if (!match) {
-      match = html.match(
-        /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']twitter:image["'][^>]*>/i
-      );
-    }
-
-    if (!match || !match[1]) return null;
-
-    // Relative image URL হলে absolute করে দেওয়া
-    return new URL(match[1], targetUrl).href;
-
-  } catch (err) {
-    return null;
   }
+
+  return null;
 }
 
 
-// ==========================================
-// MAIN FUNCTION
-// ==========================================
+// ======================================================
+// ORIGINAL WEBSITE META DATA
+// ======================================================
 
-export async function onRequest(context) {
+async function getOriginalMeta(targetUrl) {
 
-  const { request, next } = context;
+  try {
 
-  const url = new URL(request.url);
+    const response = await fetch(targetUrl, {
 
-  const path = url.pathname.replace(/^\/+/, "");
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; FacebookExternalHit/1.1)"
+      }
+
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    const html = await response.text();
 
 
-  // Root / static file
-  if (path === "" || path.includes(".")) {
-    return next();
+    // ------------------------------------------
+    // TITLE
+    // ------------------------------------------
+
+    let title =
+      getMeta(html, "property", "og:title");
+
+    if (!title) {
+      title =
+        getMeta(html, "name", "twitter:title");
+    }
+
+    if (!title) {
+
+      const titleMatch =
+        html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+
+      if (titleMatch) {
+        title = titleMatch[1].trim();
+      }
+
+    }
+
+
+    // ------------------------------------------
+    // DESCRIPTION
+    // ------------------------------------------
+
+    let description =
+      getMeta(html, "property", "og:description");
+
+    if (!description) {
+      description =
+        getMeta(html, "name", "description");
+    }
+
+    if (!description) {
+      description =
+        getMeta(html, "name", "twitter:description");
+    }
+
+
+    // ------------------------------------------
+    // IMAGE
+    // ------------------------------------------
+
+    let image =
+      getMeta(html, "property", "og:image");
+
+    if (!image) {
+      image =
+        getMeta(html, "name", "twitter:image");
+    }
+
+
+    // ------------------------------------------
+    // IMAGE URL ABSOLUTE করা
+    // ------------------------------------------
+
+    if (image) {
+
+      try {
+        image =
+          new URL(image, targetUrl).href;
+      } catch (e) {
+        image = null;
+      }
+
+    }
+
+
+    // ------------------------------------------
+    // SITE NAME
+    // ------------------------------------------
+
+    const siteName =
+      getMeta(html, "property", "og:site_name");
+
+
+    return {
+
+      title:
+        title || "Online Real Kaj",
+
+      description:
+        description || "",
+
+      image:
+        image || null,
+
+      siteName:
+        siteName || ""
+
+    };
+
+
+  } catch (error) {
+
+    console.error(
+      "Original meta error:",
+      error
+    );
+
+    return null;
+
   }
 
+}
 
-  // ==========================================
-  // USER AGENT
-  // ==========================================
+
+// ======================================================
+// CRAWLER DETECTION
+// ======================================================
+
+function isCrawler(request) {
 
   const ua =
-    (request.headers.get("user-agent") || "").toLowerCase();
+    (request.headers.get("user-agent") || "")
+      .toLowerCase();
 
+  return (
 
-  // Telegram / Facebook / WhatsApp ইত্যাদি preview crawler
-  const isCrawler =
     ua.includes("facebookexternalhit") ||
     ua.includes("facebot") ||
     ua.includes("telegrambot") ||
     ua.includes("twitterbot") ||
-    ua.includes("xbot") ||
     ua.includes("linkedinbot") ||
     ua.includes("slackbot") ||
     ua.includes("discordbot") ||
     ua.includes("whatsapp") ||
     ua.includes("skypeuripreview") ||
-    ua.includes("google-read-aloud") ||
-    ua.includes("applebot");
+    ua.includes("pinterest") ||
+    ua.includes("googlebot") ||
+    ua.includes("applebot")
+
+  );
+
+}
+
+
+// ======================================================
+// NETLIFY FUNCTION
+// ======================================================
+
+export default async (request, context) => {
+
+  const url =
+    new URL(request.url);
+
+  const path =
+    url.pathname.replace(/^\/+/, "");
+
+
+  // ----------------------------------------------------
+  // ROOT
+  // ----------------------------------------------------
+
+  if (!path) {
+
+    return new Response(
+      "Online Real Kaj",
+      {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "text/plain; charset=UTF-8"
+        }
+      }
+    );
+
+  }
+
+
+  // ----------------------------------------------------
+  // STATIC FILE হলে
+  // ----------------------------------------------------
+
+  if (path.includes(".")) {
+
+    return new Response(
+      "Not Found",
+      {
+        status: 404
+      }
+    );
+
+  }
 
 
   try {
 
-    // ==========================================
-    // FIREBASE থেকে ORIGINAL URL
-    // ==========================================
+    // ==================================================
+    // FIREBASE থেকে SHORT LINK
+    // ==================================================
 
-    const res = await fetch(
-      `${FIREBASE_DB_URL}/links/${path}.json`
-    );
-
-    const data = await res.json();
-
-
-    if (data && data.url) {
-
-      const targetUrl = data.url;
+    const firebaseResponse =
+      await fetch(
+        `${FIREBASE_DB_URL}/links/${encodeURIComponent(path)}.json`
+      );
 
 
-      // ==========================================
-      // CRAWLER হলে CUSTOM PREVIEW
-      // ==========================================
+    if (!firebaseResponse.ok) {
 
-      if (isCrawler) {
+      return new Response(
+        "Not Found",
+        {
+          status: 404
+        }
+      );
 
-        // Original website-এর image বের করা
-        const originalImage =
-          await getOriginalImage(targetUrl);
-
-
-        const title =
-          escapeHTML(PREVIEW_TITLE);
-
-        const description =
-          escapeHTML(PREVIEW_DESCRIPTION);
+    }
 
 
-        const imageMeta = originalImage
+    const data =
+      await firebaseResponse.json();
+
+
+    if (!data || !data.url) {
+
+      return new Response(
+        "Short link not found",
+        {
+          status: 404
+        }
+      );
+
+    }
+
+
+    const targetUrl =
+      data.url;
+
+
+    // ==================================================
+    // FACEBOOK / TELEGRAM / WHATSAPP CRAWLER
+    // ==================================================
+
+    if (isCrawler(request)) {
+
+      const meta =
+        await getOriginalMeta(targetUrl);
+
+
+      const title =
+        meta?.title ||
+        "Online Real Kaj";
+
+
+      const description =
+        meta?.description ||
+        "";
+
+
+      const image =
+        meta?.image ||
+        null;
+
+
+      const siteName =
+        meta?.siteName ||
+        "Online Real Kaj";
+
+
+      // ----------------------------------------------
+      // IMAGE META
+      // ----------------------------------------------
+
+      const imageHTML =
+        image
           ? `
-<meta property="og:image" content="${escapeHTML(originalImage)}">
-<meta name="twitter:image" content="${escapeHTML(originalImage)}">
+<meta property="og:image"
+      content="${escapeHTML(image)}">
+
+<meta property="og:image:secure_url"
+      content="${escapeHTML(image)}">
+
+<meta name="twitter:image"
+      content="${escapeHTML(image)}">
+
+<meta name="twitter:card"
+      content="summary_large_image">
 `
-          : "";
+          : `
+<meta name="twitter:card"
+      content="summary">
+`;
 
 
-        const previewHTML = `
+      // ----------------------------------------------
+      // PREVIEW HTML
+      // ----------------------------------------------
+
+      const html = `
 <!DOCTYPE html>
+
 <html lang="bn">
 
 <head>
 
 <meta charset="UTF-8">
 
-<title>${title}</title>
+<title>${escapeHTML(title)}</title>
+
 
 <meta
   name="description"
-  content="${description}"
+  content="${escapeHTML(description)}"
 >
+
+
+<!-- FACEBOOK -->
 
 <meta
   property="og:type"
@@ -189,15 +394,13 @@ export async function onRequest(context) {
 
 <meta
   property="og:title"
-  content="${title}"
+  content="${escapeHTML(title)}"
 >
 
 <meta
   property="og:description"
-  content="${description}"
+  content="${escapeHTML(description)}"
 >
-
-${imageMeta}
 
 <meta
   property="og:url"
@@ -206,31 +409,33 @@ ${imageMeta}
 
 <meta
   property="og:site_name"
-  content="Online Real Kaj"
+  content="${escapeHTML(siteName)}"
 >
 
-<meta
-  name="twitter:card"
-  content="summary_large_image"
->
+${imageHTML}
+
+
+<!-- TWITTER -->
 
 <meta
   name="twitter:title"
-  content="${title}"
+  content="${escapeHTML(title)}"
 >
 
 <meta
   name="twitter:description"
-  content="${description}"
+  content="${escapeHTML(description)}"
 >
+
 
 </head>
 
+
 <body>
 
-<h1>${title}</h1>
+<h1>${escapeHTML(title)}</h1>
 
-<p>${description}</p>
+<p>${escapeHTML(description)}</p>
 
 </body>
 
@@ -238,55 +443,102 @@ ${imageMeta}
 `;
 
 
-        return new Response(previewHTML, {
+      return new Response(
+        html,
+        {
+
           status: 200,
+
           headers: {
-            "Content-Type": "text/html; charset=UTF-8",
-            "Cache-Control": "no-store, no-cache, must-revalidate"
+
+            "Content-Type":
+              "text/html; charset=UTF-8",
+
+            // Facebook যাতে পুরোনো preview ধরে না রাখে
+            "Cache-Control":
+              "no-cache, no-store, must-revalidate",
+
+            "Pragma":
+              "no-cache",
+
+            "Expires":
+              "0"
+
           }
-        });
-      }
 
-
-      // ==========================================
-      // NORMAL USER
-      // ==========================================
-
-      context.waitUntil(
-
-        fetch(
-          `${FIREBASE_DB_URL}/links/${path}/clicks.json`,
-          {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify(
-              (data.clicks || 0) + 1
-            )
-          }
-        )
-
+        }
       );
 
-
-      // Original URL-এ redirect
-      return Response.redirect(
-        targetUrl,
-        302
-      );
     }
 
-  } catch (err) {
 
-    console.error(err);
+    // ==================================================
+    // NORMAL USER
+    // ==================================================
+
+    context.waitUntil(
+
+      fetch(
+        `${FIREBASE_DB_URL}/links/${encodeURIComponent(path)}/clicks.json`,
+        {
+
+          method: "PUT",
+
+          headers: {
+            "Content-Type":
+              "application/json"
+          },
+
+          body:
+            JSON.stringify(
+              (Number(data.clicks) || 0) + 1
+            )
+
+        }
+      )
+
+    );
+
+
+    // ==================================================
+    // ORIGINAL WEBSITE REDIRECT
+    // ==================================================
+
+    return Response.redirect(
+      targetUrl,
+      302
+    );
+
+
+  } catch (error) {
+
+    console.error(
+      "Shortlink error:",
+      error
+    );
+
+
+    return new Response(
+      "Server Error",
+      {
+        status: 500
+      }
+    );
 
   }
 
+};
 
-  // ==========================================
-  // SHORT CODE না পাওয়া গেলে
-  // ==========================================
 
-  return next();
-}
+// ======================================================
+// NETLIFY ROUTING
+// ======================================================
+
+export const config = {
+
+  path: "/*",
+
+  // index.html/css/js থাকলে সেগুলো আগে serve করবে
+  preferStatic: true
+
+};

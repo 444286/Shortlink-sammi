@@ -56,64 +56,80 @@
     display: none;
   }
   .error.show { display: block; }
-  #resultList {
-    margin-top: 22px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .linkRow {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    background: #f5f5fa;
-    border-radius: 10px;
-    padding: 12px 14px;
-  }
-  .linkRow .num {
-    font-size: 13px;
-    font-weight: 700;
-    color: #aaa;
-    min-width: 20px;
-order: 2;
-  }
-  .linkRow .linkText {
-    flex: 1;
-    font-size: 14px;
-    font-weight: 600;
-    color: #764ba2;
-    word-break: break-all;
-order: 3;
-  }
-  .linkRow .copyBtn {
-    width: auto;
-    margin-top: 0;
-    padding: 14px 24px;
-    font-size: 16px;
-    font-weight: 600;
-    background: #333;
-    white-space: nowrap;
-    border-radius: 8px;
-    order: 1;
-  }
-  .linkRow .copiedLabel {
-    color: #d33;
-    font-size: 14px;
-    font-weight: 700;
-    white-space: nowrap;
-    display: none;
-order: 4;
-  }
-  .linkRow .copiedLabel.show { display: inline; }
-  .progress {
-    text-align: center;
-    font-size: 13px;
-    color: #999;
-    margin-top: 14px;
-    display: none;
-  }
-  .progress.show { display: block; }
+  ##resultList {
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.linkRow {
+  display: grid;
+  grid-template-columns: 25px 82px 72px 1fr;
+  align-items: center;
+  gap: 8px;
+  background: #f5f5fa;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.linkRow .num {
+  font-size: 13px;
+  font-weight: 700;
+  color: #aaa;
+  min-width: 0;
+}
+
+.linkRow .linkText {
+  grid-column: 4;
+  grid-row: 1;
+  font-size: 14px;
+  font-weight: 600;
+  color: #764ba2;
+  word-break: break-all;
+  min-width: 0;
+}
+
+/* Copy button সব row-তে একই left position-এ */
+.linkRow .copyBtn {
+  grid-column: 2;
+  grid-row: 1;
+  width: 82px;
+  margin-top: 0;
+  padding: 14px 8px;
+  font-size: 16px;
+  font-weight: 600;
+  background: #333;
+  white-space: nowrap;
+  border-radius: 8px;
+}
+
+/* Copied-ও Copy button-এর ঠিক পাশে থাকবে */
+.linkRow .copiedLabel {
+  grid-column: 3;
+  grid-row: 1;
+  color: #d33;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  display: none;
+}
+
+.linkRow .copiedLabel.show {
+  display: inline;
+}
+
+.progress {
+  text-align: center;
+  font-size: 13px;
+  color: #999;
+  margin-top: 14px;
+  display: none;
+}
+
+.progress.show {
+  display: block;
+}
 </style>
 </head>
 <body>

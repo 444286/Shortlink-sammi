@@ -56,80 +56,108 @@
     display: none;
   }
   .error.show { display: block; }
-  ##resultList {
-  margin-top: 22px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
 
-.linkRow {
-  display: grid;
-  grid-template-columns: 25px 82px 72px 1fr;
-  align-items: center;
-  gap: 8px;
-  background: #f5f5fa;
-  border-radius: 10px;
-  padding: 10px 12px;
-}
+  #resultList {
+    margin-top: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
 
-.linkRow .num {
-  font-size: 13px;
-  font-weight: 700;
-  color: #aaa;
-  min-width: 0;
-}
+  .linkRow {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 8px;
+    background: #f5f5fa;
+    border-radius: 10px;
+    padding: 10px 12px;
+  }
 
-.linkRow .linkText {
-  grid-column: 4;
-  grid-row: 1;
-  font-size: 14px;
-  font-weight: 600;
-  color: #764ba2;
-  word-break: break-all;
-  min-width: 0;
-}
+  .linkRow .num {
+    font-size: 13px;
+    font-weight: 700;
+    color: #aaa;
+  }
 
-/* Copy button সব row-তে একই left position-এ */
-.linkRow .copyBtn {
-  grid-column: 2;
-  grid-row: 1;
-  width: 82px;
-  margin-top: 0;
-  padding: 14px 8px;
-  font-size: 16px;
-  font-weight: 600;
-  background: #333;
-  white-space: nowrap;
-  border-radius: 8px;
-}
+  .linkRow .linkText {
+    font-size: 14px;
+    font-weight: 600;
+    color: #764ba2;
+    word-break: break-all;
+  }
 
-/* Copied-ও Copy button-এর ঠিক পাশে থাকবে */
-.linkRow .copiedLabel {
-  grid-column: 3;
-  grid-row: 1;
-  color: #d33;
-  font-size: 14px;
-  font-weight: 700;
-  white-space: nowrap;
-  display: none;
-}
+  /* Container that holds both Copied label + Copy button */
+  .actionArea {
+    position: relative;
+    width: 140px;
+    height: 36px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-radius: 8px;
+  }
 
-.linkRow .copiedLabel.show {
-  display: inline;
-}
+  /* "✓ Copied" — left side, hidden until done */
+  .copiedLabel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 36px;
+    width: 68px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: #d33;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.25s ease 0.2s;
+    pointer-events: none;
+  }
 
-.progress {
-  text-align: center;
-  font-size: 13px;
-  color: #999;
-  margin-top: 14px;
-  display: none;
-}
+  .actionArea.done .copiedLabel {
+    opacity: 1;
+  }
 
-.progress.show {
-  display: block;
-}
+  /* Copy button — positioned on the right, slides further right on done */
+  .copyBtn {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 72px;
+    height: 36px;
+    margin-top: 0;
+    padding: 0;
+    font-size: 14px;
+    font-weight: 700;
+    background: #333;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .copyBtn:hover { background: #555; }
+
+  .actionArea.done .copyBtn {
+    transform: translateX(120%);
+    pointer-events: none;
+  }
+
+  .progress {
+    text-align: center;
+    font-size: 13px;
+    color: #999;
+    margin-top: 14px;
+    display: none;
+  }
+
+  .progress.show {
+    display: block;
+  }
 </style>
 </head>
 <body>
@@ -149,12 +177,12 @@
 
 <script>
 const COPY_TEMPLATE = `⚠️কোনো রেফার লাগবেনা টাকা তুলতে। 
-কোনো টাকাও ইনভেস্ট করতে হয়না এখানে।মানে সম্পুর্ন ফ্রিতে কাজ করে টাকা তোলা যায়। 
+কোনো টাকাও ইনভেস্ট করতে হয়না এখানে।মানে সম্পুর্ন ফ্রিতে কাজ করে টাকা তোলা যায়। 
 ⚠️১০০% পেমেন্ট ভেরিফাইড সাইট।
-কষ্ট করে রেফার করতে হয়না তাই একবার চেক করে দেখতে পারেন।কাজের বিস্তারিত জানতে ইনবক্সে আসার দরকার নেই নিচের লিংকে গেলেই সব বিস্তারিত পেয়ে যাবেন
+কষ্ট করে রেফার করতে হয়না তাই একবার চেক করে দেখতে পারেন।কাজের বিস্তারিত জানতে ইনবক্সে আসার দরকার নেই নিচের লিংকে গেলেই সব বিস্তারিত পেয়ে যাবেন
 
 লিংকঃ  `;
-// Firebase Realtime Database URL
+
 const FIREBASE_DB_URL = "https://shortlink-sammi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
 function generateCode(length = 6) {
@@ -213,7 +241,7 @@ async function shortenLink() {
   const longUrl = input.value.trim();
 
   errorBox.classList.remove("show");
-  resultList.innerHTML = ""; // age jeta chilo shob mucche dilo (refresh na kore o notun generate korle replace hoy)
+  resultList.innerHTML = "";
 
   if (!isValidUrl(longUrl)) {
     errorBox.textContent = "Sothik URL din (http:// othoba https:// diye shuru hote hobe)";
@@ -243,8 +271,6 @@ async function shortenLink() {
 
 function addLinkRow(num, link) {
   const resultList = document.getElementById("resultList");
-
-  // Copy হবে পুরো message
   const fullMessage = COPY_TEMPLATE + link;
 
   const row = document.createElement("div");
@@ -253,92 +279,75 @@ function addLinkRow(num, link) {
   row.innerHTML = `
     <span class="num">${num}.</span>
     <span class="linkText">${link}</span>
-    <button class="copyBtn">Copy</button>
-    <span class="copiedLabel">✓ Copied</span>
+    <div class="actionArea">
+      <span class="copiedLabel">✓ Copied</span>
+      <button class="copyBtn">Copy</button>
+    </div>
   `;
 
-  const btn = row.querySelector(".copyBtn");
+  const actionArea = row.querySelector(".actionArea");
+  const copyBtn = row.querySelector(".copyBtn");
 
-  btn.addEventListener("click", async () => {
-  try {
-    await navigator.clipboard.writeText(fullMessage);
-
-    const label = btn.nextElementSibling;
-    label.classList.add("show");
-
-  } catch (err) {
-    alert("Copy failed!");
-  }
-});
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(fullMessage);
+      // Button slides right, Copied label fades in on the left — stays forever
+      actionArea.classList.add("done");
+    } catch (err) {
+      alert("Copy failed!");
+    }
+  });
 
   resultList.appendChild(row);
 }
 </script>
 
-
-
 <script>
-
-
 (async () => {
+  const path = location.pathname.replace(/^\/+/, "");
 
-    const path = location.pathname.replace(/^\/+/,"");
+  if (path === "" || path === "index.html") return;
+  if (path.includes(".")) return;
 
-    // Home page
-    if(path==="" || path==="index.html") return;
+  const ua = (navigator.userAgent || "").toLowerCase();
+  const isCrawler =
+    ua.includes("facebookexternalhit") ||
+    ua.includes("facebot") ||
+    ua.includes("telegrambot") ||
+    ua.includes("twitterbot") ||
+    ua.includes("xbot") ||
+    ua.includes("linkedinbot") ||
+    ua.includes("slackbot") ||
+    ua.includes("discordbot") ||
+    ua.includes("whatsapp") ||
+    ua.includes("skypeuripreview") ||
+    ua.includes("applebot");
 
-    // Static file ignore
-    if(path.includes(".")) return;
+  if (isCrawler) {
+    document.body.innerHTML = "";
+    return;
+  }
 
-    const ua=(navigator.userAgent||"").toLowerCase();
+  try {
+    const res = await fetch(`${FIREBASE_DB_URL}/links/${path}.json`);
+    const data = await res.json();
 
-    const isCrawler=
-        ua.includes("facebookexternalhit")||
-        ua.includes("facebot")||
-        ua.includes("telegrambot")||
-        ua.includes("twitterbot")||
-        ua.includes("xbot")||
-        ua.includes("linkedinbot")||
-        ua.includes("slackbot")||
-        ua.includes("discordbot")||
-        ua.includes("whatsapp")||
-        ua.includes("skypeuripreview")||
-        ua.includes("applebot");
+    if (data && data.url) {
+      fetch(`${FIREBASE_DB_URL}/links/${path}/clicks.json`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify((data.clicks || 0) + 1)
+      });
 
-    // Bot হলে কিছুই করবে না
-    if(isCrawler){
-        document.body.innerHTML="";
-        return;
+      location.replace(data.url);
+      return;
     }
+  } catch (e) {}
 
-    try{
-
-        const res=await fetch(`${FIREBASE_DB_URL}/links/${path}.json`);
-        const data=await res.json();
-
-        if(data && data.url){
-
-            fetch(`${FIREBASE_DB_URL}/links/${path}/clicks.json`,{
-                method:"PUT",
-                headers:{
-                    "Content-Type":"application/json"
-                },
-                body:JSON.stringify((data.clicks||0)+1)
-            });
-
-            location.replace(data.url);
-            return;
-        }
-
-    }catch(e){}
-
-    document.body.innerHTML=`
-    <div style="
-    font-family:Arial;
-    text-align:center;
-    margin-top:80px;">
-    <h2>404</h2>
-    <p>Short link not found.</p>
+  document.body.innerHTML = `
+    <div style="font-family:Arial;text-align:center;margin-top:80px;">
+      <h2>404</h2>
+      <p>Short link not found.</p>
     </div>`;
 })();
 </script>

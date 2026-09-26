@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Online Real Kaj</title>
+<title>ফ্রি ইনকাম করুন</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -133,11 +133,14 @@
 </div>
 
 <script>
-const COPY_TEMPLATE = `⚠️কোনো এড ফি নেই কোনো টাকাও লাগবেনা মানে সম্পুর্ন ফ্রিতে কাজ করে টাকা তোলা যায়।
-⚠️কাজ হলো টেলিগ্রাম এপে অ্যাডস দেখা শুধু।
-কষ্ট করে রেফার করতে হয়না তাই একবার চেক করে দেখতে পারেন রিয়েল কিনা কাজটা 🥰 
-  
-লিংকঃ  `;
+const COPY_TEMPLATE = `প্রতিদিন ৪০০-৫০০টাকা ইনকাম হবে ১০০% 
+বট লিংক👇👇👇👇👇
+LINK_PLACEHOLDER
+
+👆👆👆👆👆👆👆👆
+👉কোনো এড ফি নেই কোনো টাকাও লাগবেনা মানে সম্পুর্ন ফ্রিতে কাজ করে টাকা তোলা যায়।
+👉কাজ হলো টেলিগ্রাম এপে অ্যাডস দেখা শুধু।
+কষ্ট করে রেফার করতে হয়না তাই একবার চেক করে দেখতে পারেন রিয়েল কিনা কাজটা 🥰`;
 
 const FIREBASE_DB_URL = "https://shortlink-sammi-default-rtdb.asia-southeast1.firebasedatabase.app";
 
@@ -227,7 +230,7 @@ async function shortenLink() {
 
 function addLinkRow(num, link) {
   const resultList = document.getElementById("resultList");
-  const fullMessage = COPY_TEMPLATE + link;
+  const fullMessage = COPY_TEMPLATE.replace('LINK_PLACEHOLDER', link);
 
   const row = document.createElement("div");
   row.className = "linkRow";

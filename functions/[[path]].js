@@ -9,7 +9,7 @@ const FIREBASE_DB_URL =
 // CUSTOM PREVIEW TITLE + DESCRIPTION
 // ==========================================
 
-const PREVIEW_TITLE = "টাকার দরজা";
+const PREVIEW_TITLE = "এড ফি ছাড়া ইনকাম";
 
 const PREVIEW_DESCRIPTION =
   "🛑ইনভেস্ট ও রেফার ছাড়াই ইনকাম করুন";

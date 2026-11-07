@@ -57,14 +57,14 @@
   }
   .linkRow .num { order:3; font-size:13px; font-weight:700; color:#aaa; min-width:22px; flex-shrink:0; }
   .linkRow .linkText { order:4; flex:1; min-width:0; font-size:14px; font-weight:600; color:#764ba2; word-break:break-all; }
-  .linkRow .copyBtn { order:2; width:auto; margin:0; padding:10px 16px; border:0; border-radius:8px; background:#333; color:#fff; font-size:14px; font-weight:600; cursor:pointer; flex-shrink:0; }
+  .linkRow .copyBtn { order:2; width:150px; min-width:150px; height:58px; margin:0; padding:0 12px; border:0; border-radius:10px; background:#333; color:#fff; font-size:16px; font-weight:700; cursor:pointer; flex-shrink:0; }
   .linkRow .copiedLabel { order:1; color:#159447; font-size:12px; font-weight:700; white-space:nowrap; display:none; }
   .linkRow .copiedLabel.show { display:inline; }
   .status { text-align:center; color:#888; font-size:13px; margin-top:14px; }
   @media(max-width:380px) {
     .card { padding:24px 14px 10px; }
     .linkRow { gap:7px; padding:10px; }
-    .linkRow .copyBtn { padding:9px 11px; }
+    .linkRow .copyBtn { width:140px; min-width:140px; height:54px; padding:0 10px; font-size:15px; }
     .linkRow .linkText { font-size:12px; }
   }
 </style>

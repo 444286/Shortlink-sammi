@@ -52,7 +52,7 @@
 
 <div class="card">
   <h1>🔗 Short Link List</h1>
-  <p class="sub">প্রতিবার সাইটে প্রবেশ বা Refresh করলে নতুন ১০টি লিংক তৈরি হবে</p>
+  <p class="sub">প্রতিবার সাইটে প্রবেশ বা Refresh করলে নতুন ১০টি ৬ অক্ষরের ইউনিক লিংক তৈরি হবে</p>
   <div class="status" id="progressBox">নতুন লিংক তৈরি হচ্ছে...</div>
   <div class="error" id="errorBox"></div>
   <div id="resultList"></div>
@@ -66,43 +66,72 @@ const FIREBASE_DB_URL = "https://shortlink-sammi-default-rtdb.asia-southeast1.fi
 // Firebase POST creates a new server-generated push key for every link.
 // It does not overwrite an existing key, even when multiple visitors refresh together.
 async function createOneShortLink(targetUrl) {
-  const saveRes = await fetch(`${FIREBASE_DB_URL}/links.json`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      url: targetUrl,
-      created: Date.now(),
-      clicks: 0
-    })
-  });
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const length = 6;
 
-  if (!saveRes.ok) {
-    throw new Error(`Firebase save failed (${saveRes.status})`);
+  for (let attempt = 0; attempt < 100; attempt++) {
+    const bytes = new Uint8Array(length);
+    crypto.getRandomValues(bytes);
+    const code = Array.from(bytes, b => chars[b % chars.length]).join("");
+
+    const recordUrl = `${FIREBASE_DB_URL}/links/${code}.json`;
+
+    // Read the candidate and its ETag from Firebase.
+    const check = await fetch(recordUrl, {
+      headers: { "X-Firebase-ETag": "true" },
+      cache: "no-store"
+    });
+
+    if (!check.ok) {
+      throw new Error(`Firebase read failed (${check.status})`);
+    }
+
+    const existing = await check.json();
+    const etag = check.headers.get("ETag");
+
+    // If this 6-character code already exists, generate another.
+    if (existing !== null) continue;
+    if (!etag) {
+      throw new Error("Firebase did not return an ETag; check database settings.");
+    }
+
+    // Conditional write: only create if the path is still empty.
+    // This prevents two simultaneous visitors from overwriting the same code.
+    const save = await fetch(recordUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "if-match": etag
+      },
+      body: JSON.stringify({
+        url: targetUrl,
+        created: Date.now(),
+        clicks: 0
+      })
+    });
+
+    // Another request may have claimed this code after our read.
+    if (save.status === 412) continue;
+
+    if (!save.ok) {
+      throw new Error(`Firebase save failed (${save.status})`);
+    }
+
+    // Verify the saved record before returning the short URL.
+    const verify = await fetch(recordUrl, { cache: "no-store" });
+    if (!verify.ok) {
+      throw new Error(`Firebase verification failed (${verify.status})`);
+    }
+
+    const savedData = await verify.json();
+    if (!savedData || savedData.url !== targetUrl) {
+      throw new Error("Saved link verification failed");
+    }
+
+    return `${window.location.origin}/${code}`;
   }
 
-  const result = await saveRes.json();
-  if (!result || typeof result.name !== "string" || !result.name) {
-    throw new Error("Firebase did not return a unique key");
-  }
-
-  const code = result.name;
-
-  // Read back the newly saved record to verify it exists and contains the target URL.
-  const checkRes = await fetch(
-    `${FIREBASE_DB_URL}/links/${encodeURIComponent(code)}.json`,
-    { cache: "no-store" }
-  );
-
-  if (!checkRes.ok) {
-    throw new Error(`Firebase verification read failed (${checkRes.status})`);
-  }
-
-  const savedData = await checkRes.json();
-  if (!savedData || savedData.url !== targetUrl) {
-    throw new Error("Saved link verification failed");
-  }
-
-  return `${window.location.origin}/${code}`;
+  throw new Error("Could not generate a unique 6-character code after 100 attempts.");
 }
 
 function createFullPost(link) {

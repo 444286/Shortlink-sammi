@@ -9,7 +9,7 @@ const FIREBASE_DB_URL =
 // CUSTOM PREVIEW TITLE + DESCRIPTION
 // ==========================================
 
-const PREVIEW_TITLE = "অনলাইন জব এড ফি ছাড়া";
+const PREVIEW_TITLE = "কমেন্ট করে ইনকাম";
 
 const PREVIEW_DESCRIPTION =
   "🛑ইনভেস্ট ও রেফার ছাড়াই ইনকাম করুন";
